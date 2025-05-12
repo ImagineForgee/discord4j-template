@@ -1,7 +1,7 @@
 package com.example.discordbot.commands.impl.example;
 
+import com.clawsoftstudios.purrfectlib.annotations.Command;
 import com.example.discordbot.commands.CommandHandler;
-import com.github.clawsoftsolutions.purrfectlib.annotations.Command;
 import discord4j.core.event.domain.interaction.ChatInputInteractionEvent;
 import reactor.core.publisher.Mono;
 

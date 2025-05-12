@@ -14,7 +14,7 @@ public class EventManager {
     private final Map<Class<?>, List<EventHandler<?>>> handlers = new HashMap<>();
 
     public void initialize(GatewayDiscordClient client) {
-        Reflections reflections = new Reflections("com.github.clawsoftsolutions.discordbot.events.impl");
+        Reflections reflections = new Reflections("com.example.discordbot.events.impl");
         Set<Class<?>> eventClasses = reflections.getTypesAnnotatedWith(EventListen.class);
 
         for (Class<?> clazz : eventClasses) {

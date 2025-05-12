@@ -1,22 +1,19 @@
 package com.example.discordbot.managers;
 
+import com.clawsoftstudios.purrfectlib.annotations.Command;
+import com.clawsoftstudios.purrfectlib.enums.OptionType;
+import com.clawsoftstudios.purrfectlib.manager.AbstractCommandManager;
+import com.clawsoftstudios.purrfectlib.scanner.CommandInfo;
+import com.clawsoftstudios.purrfectlib.scanner.CommandScanner;
 import com.example.discordbot.Constants;
 import com.example.discordbot.commands.CommandGroup;
 import com.example.discordbot.commands.CommandHandler;
-import com.github.clawsoftsolutions.purrfectlib.annotations.Command;
-import com.github.clawsoftsolutions.purrfectlib.enums.OptionType;
-import com.github.clawsoftsolutions.purrfectlib.manager.AbstractCommandManager;
-import com.github.clawsoftsolutions.purrfectlib.scanner.CommandInfo;
-import com.github.clawsoftsolutions.purrfectlib.scanner.CommandScanner;
 import discord4j.core.GatewayDiscordClient;
 import discord4j.core.event.domain.interaction.ChatInputInteractionEvent;
 import discord4j.core.event.domain.lifecycle.ReadyEvent;
 import discord4j.core.object.command.ApplicationCommandInteractionOption;
 import discord4j.core.object.command.ApplicationCommandOption;
-import discord4j.discordjson.json.ApplicationCommandOptionData;
-import discord4j.discordjson.json.ApplicationCommandRequest;
-import discord4j.discordjson.json.ImmutableApplicationCommandOptionData;
-import discord4j.discordjson.json.ImmutableApplicationCommandRequest;
+import discord4j.discordjson.json.*;
 import discord4j.rest.util.Permission;
 import reactor.core.publisher.Mono;
 
@@ -44,12 +41,12 @@ public class CommandManager extends AbstractCommandManager {
         OPTION_TYPE_MAP.put(OptionType.CHANNEL, ApplicationCommandOption.Type.CHANNEL);
         OPTION_TYPE_MAP.put(OptionType.ROLE, ApplicationCommandOption.Type.ROLE);
         OPTION_TYPE_MAP.put(OptionType.MENTIONABLE, ApplicationCommandOption.Type.MENTIONABLE);
-        OPTION_TYPE_MAP.put(OptionType.NUMBER, ApplicationCommandOption.Type.NUMBER);
+        OPTION_TYPE_MAP.put(OptionType.DOUBLE, ApplicationCommandOption.Type.NUMBER);
         OPTION_TYPE_MAP.put(OptionType.ATTACHMENT, ApplicationCommandOption.Type.ATTACHMENT);
     }
 
     private void registerCommands(GatewayDiscordClient client) {
-        CommandScanner scanner = new CommandScanner("com.github.clawsoftsolutions.discordbot.commands.impl");
+        CommandScanner scanner = new CommandScanner("com.example.discordbot.commands.impl");
         List<CommandInfo> infos = scanner.scanCommands();
 
         for (CommandInfo info : infos) {
@@ -96,7 +93,7 @@ public class CommandManager extends AbstractCommandManager {
                         .flatMapMany(appId ->
                                 client.getRestClient()
                                         .getApplicationService()
-                                        .bulkOverwriteGlobalApplicationCommand(appId, createCommandRequests())
+                                        .bulkOverwriteGuildApplicationCommand(appId, Long.parseLong("1234554264370544660"), createCommandRequests())
                         )
                         .then()
         ).subscribe();
@@ -114,12 +111,20 @@ public class CommandManager extends AbstractCommandManager {
 
             for (var opt : ann.options()) {
                 ApplicationCommandOption.Type optionType = (ApplicationCommandOption.Type) map(opt.type());
-                builder.addOption(ApplicationCommandOptionData.builder()
+                ImmutableApplicationCommandOptionData.Builder optionBuilder = ApplicationCommandOptionData.builder()
                         .name(opt.name())
                         .description(opt.description())
                         .type(optionType.getValue())
-                        .required(opt.required())
-                        .build());
+                        .required(opt.required());
+
+                for (var choice : opt.choices()) {
+                    ImmutableApplicationCommandOptionChoiceData.Builder choiceBuilder = ApplicationCommandOptionChoiceData.builder()
+                            .name(choice.name())
+                            .value(choice.value());
+                    optionBuilder.addChoice(choiceBuilder.build());
+                }
+
+                builder.addOption(optionBuilder.build());
             }
 
             reqs.add(builder.build());
@@ -144,12 +149,20 @@ public class CommandManager extends AbstractCommandManager {
 
                 for (var opt : ann.options()) {
                     ApplicationCommandOption.Type optionType = (ApplicationCommandOption.Type) map(opt.type());
-                    subCmdBuilder.addOption(ApplicationCommandOptionData.builder()
+                    ImmutableApplicationCommandOptionData.Builder subOptionBuilder = ApplicationCommandOptionData.builder()
                             .name(opt.name())
                             .description(opt.description())
                             .type(optionType.getValue())
-                            .required(opt.required())
-                            .build());
+                            .required(opt.required());
+
+                    for (var choice : opt.choices()) {
+                        ImmutableApplicationCommandOptionChoiceData.Builder choiceBuilder = ApplicationCommandOptionChoiceData.builder()
+                                .name(choice.name())
+                                .value(choice.value());
+                        subOptionBuilder.addChoice(choiceBuilder.build());
+                    }
+
+                    subCmdBuilder.addOption(subOptionBuilder.build());
                 }
 
                 b.addOption(subCmdBuilder.build());
@@ -161,23 +174,31 @@ public class CommandManager extends AbstractCommandManager {
                 ImmutableApplicationCommandOptionData.Builder sg = ApplicationCommandOptionData.builder()
                         .name(subGrp)
                         .description("Subgroup: " + subGrp)
-                        .type(ApplicationCommandOption.Type.SUB_COMMAND_GROUP.getValue()); // 2 = SUB_COMMAND_GROUP
+                        .type(ApplicationCommandOption.Type.SUB_COMMAND_GROUP.getValue());
 
                 for (CommandHandler h : entry.getValue()) {
                     Command ann = h.getClass().getAnnotation(Command.class);
                     ImmutableApplicationCommandOptionData.Builder subCmdBuilder = ApplicationCommandOptionData.builder()
                             .name(ann.name())
                             .description(ann.description())
-                            .type(ApplicationCommandOption.Type.SUB_COMMAND.getValue()); // 1 = SUB_COMMAND
+                            .type(ApplicationCommandOption.Type.SUB_COMMAND.getValue());
 
                     for (var opt : ann.options()) {
                         ApplicationCommandOption.Type optionType = (ApplicationCommandOption.Type) map(opt.type());
-                        subCmdBuilder.addOption(ApplicationCommandOptionData.builder()
+                        ImmutableApplicationCommandOptionData.Builder subOptionBuilder = ApplicationCommandOptionData.builder()
                                 .name(opt.name())
                                 .description(opt.description())
                                 .type(optionType.getValue())
-                                .required(opt.required())
-                                .build());
+                                .required(opt.required());
+
+                        for (var choice : opt.choices()) {
+                            ImmutableApplicationCommandOptionChoiceData.Builder choiceBuilder = ApplicationCommandOptionChoiceData.builder()
+                                    .name(choice.name())
+                                    .value(choice.value());
+                            subOptionBuilder.addChoice(choiceBuilder.build());
+                        }
+
+                        subCmdBuilder.addOption(subOptionBuilder.build());
                     }
                     sg.addOption(subCmdBuilder.build());
                 }
@@ -206,27 +227,51 @@ public class CommandManager extends AbstractCommandManager {
             if (inner.isEmpty()) return Mono.empty();
 
             String cmd = inner.get(0).getName();
-            return subgroupSubs.getOrDefault(root, Map.of())
+            CommandHandler handler = subgroupSubs.getOrDefault(root, Map.of())
                     .getOrDefault(subGroup, List.of())
                     .stream()
-                    .filter(handler ->
-                            handler.getClass().getAnnotation(Command.class).name().equals(cmd)
-                    )
+                    .filter(h -> h.getClass().getAnnotation(Command.class).name().equals(cmd))
                     .findFirst()
-                    .map(handler -> handler.execute(event))
-                    .orElse(Mono.empty());
+                    .orElse(null);
+
+            if (handler == null) return Mono.empty();
+
+            CommandGroup group = groupPermissions.get(root);
+            if (group != null) {
+                return userHasPermission(event, group.permissions()).flatMap(has -> {
+                    if (!has) {
+                        return event.reply("You do not have permission to use this command.")
+                                .withEphemeral(true);
+                    }
+                    return handler.execute(event);
+                });
+            }
+
+            return handler.execute(event);
         }
 
         if (first.getType() == ApplicationCommandOption.Type.SUB_COMMAND) {
             String cmd = first.getName();
-            return groupSubs.getOrDefault(root, List.of())
+            CommandHandler handler = groupSubs.getOrDefault(root, List.of())
                     .stream()
-                    .filter(handler ->
-                            handler.getClass().getAnnotation(Command.class).name().equals(cmd)
-                    )
+                    .filter(h -> h.getClass().getAnnotation(Command.class).name().equals(cmd))
                     .findFirst()
-                    .map(handler -> handler.execute(event))
-                    .orElse(Mono.empty());
+                    .orElse(null);
+
+            if (handler == null) return Mono.empty();
+
+            CommandGroup group = groupPermissions.get(root);
+            if (group != null) {
+                return userHasPermission(event, group.permissions()).flatMap(has -> {
+                    if (!has) {
+                        return event.reply("You do not have permission to use this command.")
+                                .withEphemeral(true);
+                    }
+                    return handler.execute(event);
+                });
+            }
+
+            return handler.execute(event);
         }
 
         return Mono.empty();
